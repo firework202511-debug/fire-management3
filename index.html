@@ -65,9 +65,9 @@
     <div id="preFormContainer" class="form-container active">
       <form id="preForm">
         <div class="form-group"><label>公司名稱 *</label><select id="preCompany" required><option value="">請選擇</option></select></div>
-        <div class="form-group"><label>其他公司</label><input type="text" id="preInputCompany"></div>
+        <div class="form-group"><label>其他公司(若上方選「其他」)</label><input type="text" id="preInputCompany"></div>
         <div class="form-group"><label>工程名稱 *</label><select id="preProject" required><option value="">請先選公司</option></select></div>
-        <div class="form-group"><label>其他工程</label><input type="text" id="preInputProject"></div>
+        <div class="form-group"><label>其他工程(若上方選「其他」)</label><input type="text" id="preInputProject"></div>
         
         <div class="form-group"><label>工地負責人 *</label><input type="text" id="preManager" required placeholder="請輸入姓名"></div>
         
@@ -78,11 +78,11 @@
         </div>
         <div class="form-group"><label>區域 *</label><select id="preArea" required><option value="">請選擇</option></select></div>
         <div class="form-group"><label>詳細位置</label><input type="text" id="preLocation" required></div>
-        <div class="form-group"><label>限制區域?</label><select id="preRestricted" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
+        <div class="form-group"><label>是否為限制區域?</label><select id="preRestricted" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
         <div class="form-group"><label>動火項目 *</label><select id="preItems" required><option value="">請選擇</option></select></div>
         
-        <div class="form-group"><label>照片1：氣體偵測</label><div class="photo-upload" onclick="document.getElementById('prePhoto1').click()">📷 上傳<input type="file" id="prePhoto1" accept="image/*" required></div><div id="prePhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：防護設備</label><div class="photo-upload" onclick="document.getElementById('prePhoto2').click()">📷 上傳<input type="file" id="prePhoto2" accept="image/*" required></div><div id="prePhoto2Status"></div></div>
+        <div class="form-group"><label>照片1：氣體偵測器照片</label><div class="photo-upload" onclick="document.getElementById('prePhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="prePhoto1" accept="image/*" required></div><div id="prePhoto1Status"></div></div>
+        <div class="form-group"><label>照片2：防護設備照片</label><div class="photo-upload" onclick="document.getElementById('prePhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="prePhoto2" accept="image/*" required></div><div id="prePhoto2Status"></div></div>
         
         <button type="submit" class="submit-btn">送出</button>
         <div id="preFormLoading" class="loading">⏳ 處理中...</div>
@@ -93,9 +93,10 @@
       <form id="duringForm">
         <div class="form-group"><label>公司名稱 *</label><select id="duringCompany" required></select></div>
         <div class="form-group"><label>工程名稱 *</label><select id="duringProject" required></select></div>
-        <div class="form-group"><label>環境無雜草殘油/免防火毯?</label><select id="q1" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：許可證</label><div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">📷 上傳<input type="file" id="duringPhoto1" accept="image/*" required></div><div id="duringPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：實際防護</label><div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">📷 上傳<input type="file" id="duringPhoto2" accept="image/*" required></div><div id="duringPhoto2Status"></div></div>
+        <div class="form-group"><label>是否判斷【作業環境經檢視無雜草、殘油等潛在風險，無須鋪設防火毯】？
+</label><select id="q1" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
+        <div class="form-group"><label>照片1：動火許可證</label><div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">📷 上傳<input type="file" id="duringPhoto1" accept="image/*" required></div><div id="duringPhoto1Status"></div></div>
+        <div class="form-group"><label>照片2：現場實際防護作業狀況</label><div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">📷 上傳<input type="file" id="duringPhoto2" accept="image/*" required></div><div id="duringPhoto2Status"></div></div>
         <button type="submit" class="submit-btn">送出</button>
         <div id="duringFormLoading" class="loading">⏳ 處理中...</div>
       </form>
@@ -106,9 +107,9 @@
         <div class="form-group"><label>公司名稱 *</label><select id="afterCompany" required></select></div>
         <div class="form-group"><label>工程名稱 *</label><select id="afterProject" required></select></div>
         <div class="form-group"><label>作業結束時間 *</label><input type="datetime-local" id="qTime" required></div>
-        <div class="form-group"><label>環境清理無火星?</label><select id="qYesNo" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：氣體偵測(選填)</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳<input type="file" id="afterPhoto2" accept="image/*"></div><div id="afterPhoto2Status"></div></div>
+        <div class="form-group"><label>是否確定【已完成環境清理無殘留火星】</label><select id="qYesNo" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
+        <div class="form-group"><label>照片1：動火作業自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
+        <div class="form-group"><label>照片2：【連續氣體偵測紀錄表】【非限制區域免傳】</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳<input type="file" id="afterPhoto2" accept="image/*"></div><div id="afterPhoto2Status"></div></div>
         <button type="submit" class="submit-btn">送出</button>
         <div id="afterFormLoading" class="loading">⏳ 處理中...</div>
       </form>
@@ -131,4 +132,5 @@
   </script>
   <script src="script.js"></script>
 </body>
+
 </html>
