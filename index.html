@@ -59,7 +59,7 @@
       <button class="tab active" onclick="switchTab('pre')">動火前</button>
       <button class="tab" onclick="switchTab('during')">動火中</button>
       <button class="tab" onclick="switchTab('after')">動火後</button>
-      <button class="tab" onclick="switchTab('query')">查詢</button>
+      <button class="tab" onclick="switchTab('query')">上傳查詢</button>
     </div>
     
     <div id="preFormContainer" class="form-container active">
@@ -95,8 +95,8 @@
         <div class="form-group"><label>工程名稱 *</label><select id="duringProject" required></select></div>
         <div class="form-group"><label>是否判斷【作業環境經檢視無雜草、殘油等潛在風險，無須鋪設防火毯】？
 </label><select id="q1" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：動火許可證</label><div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">📷 上傳<input type="file" id="duringPhoto1" accept="image/*" required></div><div id="duringPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：現場實際防護作業狀況</label><div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">📷 上傳<input type="file" id="duringPhoto2" accept="image/*" required></div><div id="duringPhoto2Status"></div></div>
+        <div class="form-group"><label>照片1：動火許可證</label><div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="duringPhoto1" accept="image/*" required></div><div id="duringPhoto1Status"></div></div>
+        <div class="form-group"><label>照片2：現場實際防護作業狀況</label><div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="duringPhoto2" accept="image/*" required></div><div id="duringPhoto2Status"></div></div>
         <button type="submit" class="submit-btn">送出</button>
         <div id="duringFormLoading" class="loading">⏳ 處理中...</div>
       </form>
@@ -108,15 +108,15 @@
         <div class="form-group"><label>工程名稱 *</label><select id="afterProject" required></select></div>
         <div class="form-group"><label>作業結束時間 *</label><input type="datetime-local" id="qTime" required></div>
         <div class="form-group"><label>是否確定【已完成環境清理無殘留火星】</label><select id="qYesNo" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：動火作業自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：【連續氣體偵測紀錄表】【非限制區域免傳】</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳<input type="file" id="afterPhoto2" accept="image/*"></div><div id="afterPhoto2Status"></div></div>
+        <div class="form-group"><label>照片1：動火作業自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
+        <div class="form-group"><label>照片2：【連續氣體偵測紀錄表】【非限制區域免傳】</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto2" accept="image/*"></div><div id="afterPhoto2Status"></div></div>
         <button type="submit" class="submit-btn">送出</button>
         <div id="afterFormLoading" class="loading">⏳ 處理中...</div>
       </form>
     </div>
 
     <div id="queryFormContainer" class="form-container">
-      <div class="form-group"><label>查詢日期 *</label><input type="date" id="queryDate" required></div>
+      <div class="form-group"><label>查詢日期 *</label><input type="date" id="queryDate"></select></div>
       <div class="form-group"><label>公司名稱 (選填)</label><select id="queryCompany"></select></div>
       <button type="button" class="submit-btn" onclick="searchRecords()">🔍 查詢</button>
       <div id="queryLoading" class="loading">⏳ 查詢中...</div>
@@ -134,3 +134,4 @@
 </body>
 
 </html>
+
