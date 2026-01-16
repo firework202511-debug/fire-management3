@@ -109,7 +109,7 @@
         <div class="form-group"><label>作業結束時間 *</label><input type="datetime-local" id="qTime" required></div>
         <div class="form-group"><label>是否確定【已完成環境清理無殘留火星】</label><select id="qYesNo" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
         <div class="form-group"><label>照片1：動火作業自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：【連續氣體偵測紀錄表】【非限制區域免傳】</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto2" accept="image/*"></div><div id="afterPhoto2Status"></div></div>
+        <div class="form-group"><label>照片2：現場恢復照片</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto2" accept="image/*"required></div><div id="afterPhoto2Status"></div></div>
         <button type="submit" class="submit-btn">送出</button>
         <div id="afterFormLoading" class="loading">⏳ 處理中...</div>
       </form>
@@ -134,5 +134,6 @@
 </body>
 
 </html>
+
 
 
