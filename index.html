@@ -5,54 +5,292 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>動火管理系統</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-    .container { max-width: 800px; margin: 0 auto; }
-    h1 { text-align: center; color: white; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
     
-    .sheet-link-container { text-align: center; margin-bottom: 25px; }
-    .sheet-link-btn { display: inline-block; color: white; text-decoration: none; font-weight: bold; border: 1px solid rgba(255,255,255,0.6); padding: 8px 20px; border-radius: 50px; background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); transition: all 0.3s; }
-    .sheet-link-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+    body {
+      font-family: 'Microsoft JhengHei', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 20px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
 
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab { flex: 1; padding: 15px; background: rgba(255,255,255,0.9); border: none; border-radius: 10px 10px 0 0; cursor: pointer; font-weight: bold; }
-    .tab.active { background: white; border-bottom: 4px solid #667eea; }
+    /* Google Sheet 按鈕樣式 */
+    .sheet-link-container {
+      text-align: center;
+      margin-bottom: 25px;
+    }
     
-    .form-container { background: white; padding: 30px; border-radius: 0 0 15px 15px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-    .form-container.active { display: block; }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
-    input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; }
-    .photo-upload { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; border-radius: 8px; }
-    .photo-upload:hover { border-color: #667eea; background: #f8f9ff; }
-    button.submit-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.2em; cursor: pointer; }
-    .loading { display: none; text-align: center; color: #667eea; margin-top: 10px; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .sheet-link-btn {
+      display: inline-block;
+      color: white; 
+      text-decoration: none; 
+      font-weight: bold;
+      border: 1px solid rgba(255,255,255,0.6); 
+      padding: 8px 20px; 
+      border-radius: 50px; 
+      background: rgba(255,255,255,0.15); 
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      font-size: 0.95em;
+    }
+
+    .sheet-link-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+    }
     
-    /* 查詢表格與圖示 */
-    .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-    .result-table th, .result-table td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
-    .result-table th { background: #f2f2f2; }
-    .badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.85em; }
-    .badge-pre { background: #48bb78; } .badge-during { background: #ed8936; } .badge-after { background: #4299e1; }
-    .photo-icon { font-size: 1.5em; text-decoration: none; cursor: pointer; transition: transform 0.2s; display: inline-block; }
-    .photo-icon:hover { transform: scale(1.2); }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 15px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      font-size: 1.1em;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .tab:hover {
+      background: white;
+      transform: translateY(-2px);
+    }
+    
+    .tab.active {
+      background: white;
+      border-bottom: 4px solid #667eea;
+    }
+    
+    .form-container {
+      background: white;
+      padding: 30px;
+      border-radius: 0 0 15px 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      display: none;
+    }
+    
+    .form-container.active {
+      display: block;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: bold;
+    }
+    
+    input[type="text"],
+    input[type="date"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .photo-upload {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .photo-upload:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+    
+    .photo-upload input[type="file"] {
+      display: none;
+    }
+    
+    .photo-label {
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+    
+    .status {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      min-height: 20px;
+    }
+    
+    button[type="submit"], button.search-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    button[type="submit"]:hover:not(:disabled), button.search-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    button[type="submit"]:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      color: #667eea;
+      margin-top: 10px;
+    }
+    
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* 查詢結果表格樣式 */
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    
+    .result-table th, .result-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    
+    .result-table th {
+      background-color: #f2f2f2;
+      color: #333;
+      font-weight: bold;
+    }
+    
+    .result-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .result-table tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .no-results {
+      text-align: center;
+      color: #666;
+      margin-top: 20px;
+      padding: 20px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: white;
+    }
+    .badge-pre { background-color: #48bb78; }
+    .badge-during { background-color: #ed8936; }
+    .badge-after { background-color: #4299e1; }
     
     @media (max-width: 600px) {
-      .row { grid-template-columns: 1fr; }
-      .result-table, .result-table tr, .result-table td { display: block; }
-      .result-table thead { display: none; }
-      .result-table tr { margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; }
-      .result-table td { padding-left: 40%; position: relative; border: none; border-bottom: 1px solid #eee; }
-      .result-table td:before { content: attr(data-label); position: absolute; left: 10px; font-weight: bold; width: 35%; }
+      .row {
+        grid-template-columns: 1fr;
+      }
+      
+      /* 手機版表格優化：轉為卡片式 */
+      .result-table, .result-table thead, .result-table tbody, .result-table th, .result-table td, .result-table tr { 
+        display: block; 
+      }
+      .result-table thead tr { 
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      .result-table tr { 
+        border: 1px solid #ccc; 
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      }
+      .result-table td { 
+        border: none;
+        border-bottom: 1px solid #eee; 
+        position: relative;
+        padding-left: 40%; 
+      }
+      .result-table td:before { 
+        position: absolute;
+        top: 12px;
+        left: 10px;
+        width: 35%; 
+        padding-right: 10px; 
+        white-space: nowrap;
+        font-weight: bold;
+        content: attr(data-label);
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔥 動火管理系統</h1>
+    
     <div class="sheet-link-container">
-      <a href="https://docs.google.com/spreadsheets/d/11p0DgmzBb3eBzAO8w8A5lR-vNGMFBMYyCOOzMwOe_W0/edit?gid=1052086617#gid=1052086617" target="_blank" class="sheet-link-btn">📊 查看 Google Sheet</a>
+      <a href="https://docs.google.com/spreadsheets/d/11p0DgmzBb3eBzAO8w8A5lR-vNGMFBMYyCOOzMwOe_W0/edit?gid=1052086617#gid=1052086617" 
+         target="_blank" 
+         class="sheet-link-btn">
+        📊 查看完整資料 (Google Sheet)
+      </a>
     </div>
 
     <div class="tabs">
@@ -64,76 +302,243 @@
     
     <div id="preFormContainer" class="form-container active">
       <form id="preForm">
-        <div class="form-group"><label>公司名稱 *</label><select id="preCompany" required><option value="">請選擇</option></select></div>
-        <div class="form-group"><label>其他公司(若上方選「其他」)</label><input type="text" id="preInputCompany"></div>
-        <div class="form-group"><label>工程名稱 *</label><select id="preProject" required><option value="">請先選公司</option></select></div>
-        <div class="form-group"><label>其他工程(若上方選「其他」)</label><input type="text" id="preInputProject"></div>
-        
-        <div class="form-group"><label>工地負責人 *</label><input type="text" id="preManager" required placeholder="請輸入姓名"></div>
-        
-        <div class="form-group"><label>主辦單位 *</label><input type="text" id="preDepartment" required></div>
-        <div class="row">
-          <div class="form-group"><label>開始時間 *</label><input type="datetime-local" id="preStartTime" required></div>
-          <div class="form-group"><label>結束時間 *</label><input type="datetime-local" id="preEndTime" required></div>
+        <div class="form-group">
+          <label>公司名稱 *</label>
+          <select id="preCompany" required>
+            <option value="">請選擇</option>
+          </select>
         </div>
-        <div class="form-group"><label>區域 *</label><select id="preArea" required><option value="">請選擇</option></select></div>
-        <div class="form-group"><label>詳細位置</label><input type="text" id="preLocation" required></div>
-        <div class="form-group"><label>是否為限制區域?</label><select id="preRestricted" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>動火項目 *</label><select id="preItems" required><option value="">請選擇</option></select></div>
         
-        <div class="form-group"><label>照片1：氣體偵測器照片</label><div class="photo-upload" onclick="document.getElementById('prePhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="prePhoto1" accept="image/*" required></div><div id="prePhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：防護設備照片</label><div class="photo-upload" onclick="document.getElementById('prePhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="prePhoto2" accept="image/*" required></div><div id="prePhoto2Status"></div></div>
+        <div class="form-group">
+          <label>其他公司（若上方選「其他」）</label>
+          <input type="text" id="preInputCompany">
+        </div>
         
-        <button type="submit" class="submit-btn">送出</button>
+        <div class="form-group">
+          <label>工程名稱 *</label>
+          <select id="preProject" required>
+            <option value="">請先選擇公司</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>其他工程名稱（若上方選「其他」）</label>
+          <input type="text" id="preInputProject">
+        </div>
+        
+        <div class="form-group">
+          <label>主辦單位 *</label>
+          <input type="text" id="preDepartment" required>
+        </div>
+        
+        <div class="row">
+          <div class="form-group">
+            <label>開始時間 *</label>
+            <input type="datetime-local" id="preStartTime" required>
+          </div>
+          
+          <div class="form-group">
+            <label>結束時間 *</label>
+            <input type="datetime-local" id="preEndTime" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>區域 *</label>
+          <select id="preArea" required>
+            <option value="">請選擇</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>詳細位置</label>
+          <input type="text" id="preLocation" required>
+        </div>
+        
+        <div class="form-group">
+          <label>是否為限制區域？</label>
+          <select id="preRestricted" required>
+            <option value="">請選擇</option>
+            <option value="是">是</option>
+            <option value="否">否</option>
+          </select>
+       </div>
+        
+        <div class="form-group">
+          <label>動火項目 *</label>
+          <select id="preItems" required>
+            <option value="">請選擇</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>照片 1：氣體偵測器照片</label>
+          <div class="photo-upload" onclick="document.getElementById('prePhoto1').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="prePhoto1" accept="image/*" required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="prePhoto1Status" class="status"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>照片 2：防護設備照片</label>
+          <div class="photo-upload" onclick="document.getElementById('prePhoto2').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="prePhoto2" accept="image/*" required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="prePhoto2Status" class="status"></div>
+        </div>
+        
+        <button type="submit">送出</button>
         <div id="preFormLoading" class="loading">⏳ 處理中...</div>
+        <div id="preFormMsg" class="status"></div>
       </form>
     </div>
     
     <div id="duringFormContainer" class="form-container">
       <form id="duringForm">
-        <div class="form-group"><label>公司名稱 *</label><select id="duringCompany" required></select></div>
-        <div class="form-group"><label>工程名稱 *</label><select id="duringProject" required></select></div>
-        <div class="form-group"><label>是否判斷【作業環境經檢視無雜草、殘油等潛在風險，無須鋪設防火毯】？
-</label><select id="q1" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：動火許可證</label><div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="duringPhoto1" accept="image/*" required></div><div id="duringPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：現場實際防護作業狀況</label><div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="duringPhoto2" accept="image/*" required></div><div id="duringPhoto2Status"></div></div>
-        <button type="submit" class="submit-btn">送出</button>
+        <div class="form-group">
+          <label>公司名稱 *</label>
+          <select id="duringCompany" required>
+            <option value="">請選擇</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>工程名稱 *</label>
+          <select id="duringProject" required>
+            <option value="">請先選擇公司</option>
+          </select>
+        </div>
+         
+       <div class="form-group">
+          <label>是否判斷【作業環境經檢視無雜草、殘油等潛在風險，無須鋪設防火毯】？</label>
+          <select id="q1" required>
+            <option value="">請選擇</option>
+            <option value="是">是</option>
+            <option value="否">否</option>
+          </select>
+       </div>
+        
+      <div class="form-group">
+          <label>照片 1：動火許可證</label>
+          <div class="photo-upload" onclick="document.getElementById('duringPhoto1').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="duringPhoto1" accept="image/*" required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="duringPhoto1Status" class="status"></div>
+      </div>
+        
+        <div class="form-group">
+          <label>照片 2：現場實際防護作業狀況</label>
+          <div class="photo-upload" onclick="document.getElementById('duringPhoto2').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="duringPhoto2" accept="image/*" required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="duringPhoto2Status" class="status"></div>
+        </div>
+        
+        <button type="submit">送出</button>
         <div id="duringFormLoading" class="loading">⏳ 處理中...</div>
+        <div id="duringFormMsg" class="status"></div>
       </form>
     </div>
-
+    
     <div id="afterFormContainer" class="form-container">
       <form id="afterForm">
-        <div class="form-group"><label>公司名稱 *</label><select id="afterCompany" required></select></div>
-        <div class="form-group"><label>工程名稱 *</label><select id="afterProject" required></select></div>
-        <div class="form-group"><label>作業結束時間 *</label><input type="datetime-local" id="qTime" required></div>
-        <div class="form-group"><label>是否確定【已完成環境清理無殘留火星】</label><select id="qYesNo" required><option value="">請選擇</option><option value="是">是</option><option value="否">否</option></select></div>
-        <div class="form-group"><label>照片1：動火作業自主檢查表</label><div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto1" accept="image/*" required></div><div id="afterPhoto1Status"></div></div>
-        <div class="form-group"><label>照片2：現場恢復照片</label><div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">📷 上傳建議大小<5MB<input type="file" id="afterPhoto2" accept="image/*"required></div><div id="afterPhoto2Status"></div></div>
-        <button type="submit" class="submit-btn">送出</button>
+        <div class="form-group">
+          <label>公司名稱 *</label>
+          <select id="afterCompany" required>
+            <option value="">請選擇</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>工程名稱 *</label>
+          <select id="afterProject" required>
+             <option value="">請先選擇公司</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>作業結束時間 *</label>
+          <input type="datetime-local" id="qTime" required>
+        </div>
+        
+        <div class="form-group">
+          <label>是否確定【已完成環境清理無殘留火星】 *</label>
+          <select id="qYesNo" required>
+            <option value="">請選擇</option>
+            <option value="是">是</option>
+            <option value="否">否</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>照片 1：動火作業自主檢查表</label>
+          <div class="photo-upload" onclick="document.getElementById('afterPhoto1').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="afterPhoto1" accept="image/*" required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="afterPhoto1Status" class="status"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>照片 2：現場恢復照片</label>
+          <div class="photo-upload" onclick="document.getElementById('afterPhoto2').click()">
+            <div>📷 點擊上傳照片</div>
+            <input type="file" id="afterPhoto2" accept="image/*"required>
+            <div class="photo-label">建議大小 < 5MB</div>
+          </div>
+          <div id="afterPhoto2Status" class="status"></div>
+        </div>
+        
+        <button type="submit">送出</button>
         <div id="afterFormLoading" class="loading">⏳ 處理中...</div>
+        <div id="afterFormMsg" class="status"></div>
       </form>
     </div>
 
     <div id="queryFormContainer" class="form-container">
-      <div class="form-group"><label>查詢日期 (選填) *</label><input type="date" id="queryDate"></select></div>
-      <div class="form-group"><label>公司名稱 (選填)</label><select id="queryCompany"></select></div>
-      <button type="button" class="submit-btn" onclick="searchRecords()">🔍 查詢</button>
+      <div class="form-group">
+        <label>查詢日期 *</label>
+        <input type="date" id="queryDate" required >
+      </div>
+
+      <div class="form-group">
+        <label>公司名稱 (選填，未選則顯示當日所有資料)</label>
+        <select id="queryCompany">
+          <option value="">請選擇</option>
+        </select>
+      </div>
+
+      <button type="button" class="search-btn" onclick="searchRecords()">🔍 查詢</button>
+      
       <div id="queryLoading" class="loading">⏳ 查詢中...</div>
+      
       <div id="queryResults"></div>
     </div>
+
   </div>
   
   <script>
-    function switchTab(t) {
-      document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active')); event.target.classList.add('active');
-      document.querySelectorAll('.form-container').forEach(e=>e.classList.remove('active')); document.getElementById(t+'FormContainer').classList.add('active');
+    function switchTab(tab) {
+      // 切換標籤樣式
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // 切換表單顯示
+      document.querySelectorAll('.form-container').forEach(c => c.classList.remove('active'));
+      document.getElementById(tab + 'FormContainer').classList.add('active');
     }
   </script>
+  
   <script src="script.js"></script>
 </body>
-
 </html>
-
-
 
