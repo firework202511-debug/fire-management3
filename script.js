@@ -1,31 +1,108 @@
-// 全域設定
+//================== 全域設定 ==================
 const CONFIG = {
-  MAX_WIDTH: 1024, JPEG_QUALITY: 0.75, API_ENDPOINT: 'https://fire-management-api.firework202511.workers.dev' // ⚠️ 請確認網址
+  MAX_WIDTH: 1024,
+  JPEG_QUALITY: 0.75,
+  MIN_QUALITY: 0.5,
+  RETRY_COUNT: 3,
+  RETRY_DELAY_BASE: 500,
+  MAX_CONCURRENT_UPLOADS: 5,
+  COMPRESSION_TIMEOUT: 8000,
+  // ⚠️ 重要：改成你的 Worker 網址
+  API_ENDPOINT: 'https://fire-management-api.firework202511.workers.dev'
 };
 
+// 表單配置
 const FORM_CONFIGS = {
   pre: {
-    formId: 'preForm', loadingId: 'preFormLoading', apiPath: '/api/submit-pre',
-    photos: [{id:'prePhoto1',s:'prePhoto1Status'}, {id:'prePhoto2',s:'prePhoto2Status'}],
+    formId: 'preForm',
+    loadingId: 'preFormLoading',
+    apiPath: '/api/submit-pre',
+    photos: [
+      { inputId: 'prePhoto1', statusId: 'prePhoto1Status' },
+      { inputId: 'prePhoto2', statusId: 'prePhoto2Status' }
+    ],
+    statusIds: ['prePhoto1Status', 'prePhoto2Status', 'preFormMsg'],
     getPayload: () => ({
-      company: val('preCompany'), inputCompany: val('preInputCompany'),
-      project: val('preProject'), inputProject: val('preInputProject'),
-      manager: val('preManager'), // [新增]
-      department: val('preDepartment'), startTime: val('preStartTime'), endTime: val('preEndTime'),
-      area: val('preArea'), location: val('preLocation'), restricted: val('preRestricted'), items: val('preItems')
+      company: getFieldValue('preCompany'),
+      inputCompany: getFieldValue('preInputCompany'),
+      project: getFieldValue('preProject'),
+      inputProject: getFieldValue('preInputProject'),
+      department: getFieldValue('preDepartment'),
+      startTime: getFieldValue('preStartTime'),
+      endTime: getFieldValue('preEndTime'),
+      area: getFieldValue('preArea'),
+      location: getFieldValue('preLocation'),
+      restricted: getFieldValue('preRestricted'),
+      items: getFieldValue('preItems')
     })
   },
   during: {
-    formId: 'duringForm', loadingId: 'duringFormLoading', apiPath: '/api/submit-during',
-    photos: [{id:'duringPhoto1',s:'duringPhoto1Status'}, {id:'duringPhoto2',s:'duringPhoto2Status'}],
-    getPayload: () => ({ company: val('duringCompany'), project: val('duringProject'), q1: val('q1') })
+    formId: 'duringForm',
+    loadingId: 'duringFormLoading',
+    apiPath: '/api/submit-during',
+    photos: [
+      { inputId: 'duringPhoto1', statusId: 'duringPhoto1Status' },
+      { inputId: 'duringPhoto2', statusId: 'duringPhoto2Status' }
+    ],
+    statusIds: ['duringPhoto1Status', 'duringPhoto2Status', 'duringFormMsg'],
+    getPayload: () => ({
+      company: getFieldValue('duringCompany'),
+      project: getFieldValue('duringProject'),
+      q1: getFieldValue('q1')
+    })
   },
   after: {
-    formId: 'afterForm', loadingId: 'afterFormLoading', apiPath: '/api/submit-after',
-    photos: [{id:'afterPhoto1',s:'afterPhoto1Status'}, {id:'afterPhoto2',s:'afterPhoto2Status'}],
-    getPayload: () => ({ company: val('afterCompany'), project: val('afterProject'), qTime: val('qTime'), qYesNo: val('qYesNo') })
+    formId: 'afterForm',
+    loadingId: 'afterFormLoading',
+    apiPath: '/api/submit-after',
+    photos: [
+      { inputId: 'afterPhoto1', statusId: 'afterPhoto1Status' },
+      { inputId: 'afterPhoto2', statusId: 'afterPhoto2Status' }
+    ],
+    statusIds: ['afterPhoto1Status', 'afterPhoto2Status', 'afterFormMsg'],
+    getPayload: () => ({
+      company: getFieldValue('afterCompany'),
+      project: getFieldValue('afterProject'),
+      qTime: getFieldValue('qTime'),
+      qYesNo: getFieldValue('qYesNo')
+    })
   }
 };
+
+// 上傳隊列管理器
+class UploadQueue {
+  constructor(maxConcurrent) {
+    this.maxConcurrent = maxConcurrent;
+    this.running = 0;
+    this.queue = [];
+  }
+
+  async add(task) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ task, resolve, reject });
+      this.process();
+    });
+  }
+
+  async process() {
+    if (this.running >= this.maxConcurrent || this.queue.length === 0) return;
+    
+    this.running++;
+    const { task, resolve, reject } = this.queue.shift();
+    
+    try {
+      const result = await task();
+      resolve(result);
+    } catch (err) {
+      reject(err);
+    } finally {
+      this.running--;
+      this.process();
+    }
+  }
+}
+
+const uploadQueue = new UploadQueue(CONFIG.MAX_CONCURRENT_UPLOADS);
 
 // ================== 初始化 ==================
 async function initApp() {
@@ -249,7 +326,6 @@ async function batchProcessPhotos(photos) {
   return results;
 }
 
-
 // ================== 表單提交邏輯 ==================
 function setupFormSubmit(config) {
   const form = document.getElementById(config.formId);
@@ -318,8 +394,6 @@ function handleSubmitError(err) {
   alert('❌ 送出失敗：' + (err.message || '未知錯誤'));
 }
 
-
-
 // [修改] 查詢功能：顯示照片圖示
 async function searchRecords() {
   const date = val('queryDate');
@@ -358,5 +432,13 @@ async function searchRecords() {
 }
 
 function val(id) { return document.getElementById(id)?.value || ''; }
-
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initApp); else initApp();
+
+// ================== 初始化所有表單 ==================
+Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+// 頁面載入時初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
