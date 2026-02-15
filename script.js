@@ -11,8 +11,9 @@ const CONFIG = {
   API_ENDPOINT: 'https://fire-management-api.firework202511.workers.dev'
 };
 
-// 全域變數：儲存組課對照表
-let GLOBAL_ORG_DATA = {}; 
+// 全域變數：儲存資料
+let GLOBAL_ORG_DATA = {};       // 組別-課別 對照表
+let GLOBAL_LOCATION_MAP = {};   // 公司-工程-地點 對照表 (新增)
 
 // ================== 表單配置 ==================
 const FORM_CONFIGS = {
@@ -26,7 +27,7 @@ const FORM_CONFIGS = {
     ],
     statusIds: ['prePhoto1Status', 'prePhoto2Status', 'preFormMsg'],
     getPayload: () => {
-        // 1. 抓取複選框
+        // 1. 抓取複選框 (動火項目)
         const checkedBoxes = document.querySelectorAll('input[name="fireItem"]:checked');
         const selectedItems = Array.from(checkedBoxes).map(cb => cb.value).join(', ');
         
@@ -71,6 +72,7 @@ const FORM_CONFIGS = {
     getPayload: () => ({
       company: getFieldValue('duringCompany'),
       project: getFieldValue('duringProject'),
+      location: getFieldValue('duringLocation'), // 新增：抓取動火地點
       q1: getFieldValue('q1')
     })
   },
@@ -86,6 +88,7 @@ const FORM_CONFIGS = {
     getPayload: () => ({
       company: getFieldValue('afterCompany'),
       project: getFieldValue('afterProject'),
+      location: getFieldValue('afterLocation'), // 新增：抓取動火地點
       qTime: getFieldValue('qTime'),
       qYesNo: getFieldValue('qYesNo')
     })
@@ -154,10 +157,11 @@ async function initApp() {
 }
 
 function initDropdowns(data) {
-  const { companies, areas, items, orgData } = data;
+  const { companies, areas, items, orgData, locationMap } = data;
   
-  // 1. 儲存組織資料到全域變數
+  // 1. 儲存全域資料
   GLOBAL_ORG_DATA = orgData || {};
+  GLOBAL_LOCATION_MAP = locationMap || {}; // 新增：儲存地點關聯
 
   // 2. 填入公司選單
   ['preCompany', 'duringCompany', 'afterCompany', 'queryCompany'].forEach(id => {
@@ -167,7 +171,7 @@ function initDropdowns(data) {
   // 3. 填入主辦部門 - "組別" 選單
   fillSelect('preGroup', Object.keys(GLOBAL_ORG_DATA));
   
-  // 4. 填入區域選單
+  // 4. 填入區域選單 (動火前用，動火中後改用連動)
   fillSelect('preArea', areas);
   
   // 5. 填入動火項目 (產生 Checkboxes)
@@ -194,8 +198,8 @@ function initDropdowns(data) {
     }
   }
 
-  // 6. 設定公司與工程連動
-  setupCompanyProjectLinks(companies);
+  // 6. 設定所有下拉選單的連動邏輯 (公司->工程->地點)
+  setupCascadingDropdowns(companies);
 }
 
 function fillSelect(id, options) {
@@ -205,13 +209,15 @@ function fillSelect(id, options) {
   if(options) {
       options.forEach(opt => el.add(new Option(opt, opt)));
   }
-  // 只有非查詢、非組別、非課別選單才加「其他」
-  if (id !== 'queryCompany' && id !== 'preGroup' && id !== 'preSection') {
+  // 只有非查詢、非組別、非課別、非地點選單才加「其他」
+  // (注意：duringLocation 和 afterLocation 是從 Map 產生的，不需要其他)
+  const noOtherIds = ['queryCompany', 'preGroup', 'preSection', 'duringLocation', 'afterLocation'];
+  if (!noOtherIds.includes(id)) {
     el.add(new Option('其他', '其他'));
   }
 }
 
-// 主辦部門連動邏輯 (組 -> 課)
+// 主辦部門連動邏輯 (組 -> 課) - 用於 HTML onchange
 function onGroupChange() {
   const group = document.getElementById('preGroup').value;
   // 從全域變數抓取該組底下的課
@@ -227,20 +233,58 @@ function onGroupChange() {
   }
 }
 
-function setupCompanyProjectLinks(companies) {
-  const pairs = [
-    { company: 'preCompany', project: 'preProject' },
-    { company: 'duringCompany', project: 'duringProject' },
-    { company: 'afterCompany', project: 'afterProject' }
+// 設定多層級連動 (公司 -> 工程 -> 地點)
+function setupCascadingDropdowns(companies) {
+  const configs = [
+    // 動火前：公司 -> 工程 (無地點連動，地點為手選區域)
+    { company: 'preCompany', project: 'preProject', location: null }, 
+    // 動火中：公司 -> 工程 -> 地點
+    { company: 'duringCompany', project: 'duringProject', location: 'duringLocation' },
+    // 動火後：公司 -> 工程 -> 地點
+    { company: 'afterCompany', project: 'afterProject', location: 'afterLocation' }
   ];
-  pairs.forEach(({ company, project }) => {
+
+  configs.forEach(({ company, project, location }) => {
     const companyEl = document.getElementById(company);
-    if (!companyEl) return;
-    
+    const projectEl = document.getElementById(project);
+    const locationEl = location ? document.getElementById(location) : null;
+
+    if (!companyEl || !projectEl) return;
+
+    // 1. 公司改變 -> 更新工程
     companyEl.addEventListener('change', () => {
-      const projects = companies[companyEl.value] || [];
-      fillSelect(project, projects);
+      const selectedCompany = companyEl.value;
+      const projects = companies[selectedCompany] || [];
+      
+      fillSelect(project, projects); // 更新工程選單
+      
+      // 若有地點選單，則在更換公司時清空地點
+      if (locationEl) {
+        fillSelect(location, []); 
+        locationEl.innerHTML = '<option value="">請先選擇工程</option>';
+      }
     });
+
+    // 2. 工程改變 -> 更新地點 (僅針對動火中/後)
+    if (locationEl) {
+      projectEl.addEventListener('change', () => {
+        const selectedCompany = companyEl.value;
+        const selectedProject = projectEl.value;
+        
+        // 從 GLOBAL_LOCATION_MAP 查找對應的地點清單
+        let locations = [];
+        if (GLOBAL_LOCATION_MAP[selectedCompany] && 
+            GLOBAL_LOCATION_MAP[selectedCompany][selectedProject]) {
+          locations = GLOBAL_LOCATION_MAP[selectedCompany][selectedProject];
+        }
+
+        fillSelect(location, locations);
+        
+        if (locations.length === 0) {
+           locationEl.innerHTML = '<option value="">無相符的動火地點</option>';
+        }
+      });
+    }
   });
 }
 
