@@ -10,6 +10,7 @@ const CONFIG = {
   // ⚠️ 重要：改成你的 Worker 網址
   API_ENDPOINT: 'https://fire-management-api.firework202511.workers.dev'
 };
+
 // 表單配置
 const FORM_CONFIGS = {
   pre: {
@@ -21,19 +22,30 @@ const FORM_CONFIGS = {
       { inputId: 'prePhoto2', statusId: 'prePhoto2Status' }
     ],
     statusIds: ['prePhoto1Status', 'prePhoto2Status', 'preFormMsg'],
+    // [新增] 必填驗證邏輯
+    validate: () => {
+      const checked = document.querySelectorAll('#preItemsContainer input:checked');
+      if (checked.length === 0) {
+        alert('請至少選擇一個動火項目！');
+        return false;
+      }
+      return true;
+    },
     getPayload: () => ({
       company: getFieldValue('preCompany'),
       inputCompany: getFieldValue('preInputCompany'),
       project: getFieldValue('preProject'),
       inputProject: getFieldValue('preInputProject'),
-      // [修改] 將組別與課別合併為一個字串送出，符合後端與Sheet格式
+      // 將組別與課別合併
       department: getFieldValue('preGroup') + ' ' + getFieldValue('preSection'),
       startTime: getFieldValue('preStartTime'),
       endTime: getFieldValue('preEndTime'),
       area: getFieldValue('preArea'),
       location: getFieldValue('preLocation'),
       restricted: getFieldValue('preRestricted'),
-      items: getFieldValue('preItems')
+      // [修改] 抓取 checkbox 的值並合併
+      items: Array.from(document.querySelectorAll('#preItemsContainer input:checked'))
+              .map(cb => cb.value).join('、')
     })
   },
   during: {
@@ -70,6 +82,7 @@ const FORM_CONFIGS = {
     })
   }
 };
+
 // 上傳隊列管理器
 class UploadQueue {
   constructor(maxConcurrent) {
@@ -123,19 +136,20 @@ async function initApp() {
 }
 
 function initDropdowns(data) {
-  const { companies, areas, items, groups } = data; // [修改] 解構出 groups
+  const { companies, areas, items, groups } = data;
   
   ['preCompany', 'duringCompany', 'afterCompany', 'queryCompany'].forEach(id => {
     fillSelect(id, Object.keys(companies));
   });
   
   fillSelect('preArea', areas);
-  fillSelect('preItems', items);
   
-  // [新增] 初始化組別選單
+  // [修改] 改用 fillCheckboxGroup 填入動火項目
+  fillCheckboxGroup('preItemsContainer', items);
+  
   if (groups) {
     fillSelect('preGroup', Object.keys(groups));
-    setupGroupSectionLinks(groups); // 設定組別與課別的連動
+    setupGroupSectionLinks(groups);
   }
 
   setupCompanyProjectLinks(companies);
@@ -150,6 +164,32 @@ function fillSelect(id, options) {
   if (id !== 'queryCompany' && id !== 'preGroup' && id !== 'preSection') {
     el.add(new Option('其他', '其他'));
   }
+}
+
+// [新增] 產生 Checkbox 群組
+function fillCheckboxGroup(containerId, options) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = ''; // 清空載入中文字
+  
+  if (!options || options.length === 0) {
+    container.innerHTML = '<div style="color:#888; grid-column: 1/-1;">無可用項目 (請檢查 Sheet 資料)</div>';
+    return;
+  }
+
+  options.forEach(opt => {
+    const label = document.createElement('label');
+    label.className = 'checkbox-label';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = opt;
+    input.name = 'preItemsCheckbox'; // 方便辨識
+    
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(opt));
+    container.appendChild(label);
+  });
 }
 
 function setupCompanyProjectLinks(companies) {
@@ -169,18 +209,14 @@ function setupCompanyProjectLinks(companies) {
   });
 }
 
-// [新增] 設定組別與課別的連動
 function setupGroupSectionLinks(groups) {
     const groupEl = document.getElementById('preGroup');
     const sectionEl = document.getElementById('preSection');
     
     if(!groupEl || !sectionEl) return;
-
     groupEl.addEventListener('change', () => {
         const selectedGroup = groupEl.value;
         const sections = groups[selectedGroup] || [];
-        
-        // 清空課別並重填
         sectionEl.innerHTML = '<option value="">請選擇</option>';
         sections.forEach(sec => {
             sectionEl.add(new Option(sec, sec));
@@ -188,13 +224,11 @@ function setupGroupSectionLinks(groups) {
     });
 }
 
-// 設定工程名稱改變時，自動抓取地點
 function setupLocationFetcher() {
   const configs = [
     { companyId: 'duringCompany', projectId: 'duringProject', locationId: 'duringLocation' },
     { companyId: 'afterCompany', projectId: 'afterProject', locationId: 'afterLocation' }
   ];
-
   configs.forEach(({ companyId, projectId, locationId }) => {
     const projectEl = document.getElementById(projectId);
     const companyEl = document.getElementById(companyId);
@@ -257,7 +291,6 @@ function calculateDimensions(width, height, maxWidth) {
   };
 }
 
-// 漸進式壓縮
 async function resizeImageProgressive(file, quality = CONFIG.JPEG_QUALITY) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -265,27 +298,15 @@ async function resizeImageProgressive(file, quality = CONFIG.JPEG_QUALITY) {
     }, CONFIG.COMPRESSION_TIMEOUT);
 
     const reader = new FileReader();
-    
     reader.onload = e => {
       const img = new Image();
-      
       img.onload = () => {
         try {
-          const { width, height } = calculateDimensions(
-            img.width, 
-            img.height, 
-            CONFIG.MAX_WIDTH
-          );
-          
+          const { width, height } = calculateDimensions(img.width, img.height, CONFIG.MAX_WIDTH);
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
-          
-          const ctx = canvas.getContext('2d', { 
-            alpha: false,
-            willReadFrequently: false 
-          });
-          
+          const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'medium';
           ctx.drawImage(img, 0, 0, width, height);
@@ -302,39 +323,25 @@ async function resizeImageProgressive(file, quality = CONFIG.JPEG_QUALITY) {
           reject(err);
         }
       };
-      
-      img.onerror = () => {
-        clearTimeout(timeout);
-        reject(new Error('無法載入圖片'));
-      };
-      
+      img.onerror = () => { clearTimeout(timeout); reject(new Error('無法載入圖片')); };
       img.src = e.target.result;
     };
-    
-    reader.onerror = () => {
-      clearTimeout(timeout);
-      reject(new Error('讀取檔案錯誤'));
-    };
-    
+    reader.onerror = () => { clearTimeout(timeout); reject(new Error('讀取檔案錯誤')); };
     reader.readAsDataURL(file);
   });
 }
 
-// 智能重試上傳
 async function uploadWithSmartRetry(file, statusId) {
   let quality = CONFIG.JPEG_QUALITY;
   for (let attempt = 1; attempt <= CONFIG.RETRY_COUNT; attempt++) {
     try {
       updateStatus(statusId, `${attempt > 1 ? '重試' : '處理'}中 (${Math.round(quality * 100)}%)...`);
       const { dataUrl, mime, filename } = await resizeImageProgressive(file, quality);
-      const result = await uploadQueue.add(() => 
-        uploadToServer(dataUrl, mime, filename, statusId, attempt)
-      );
+      const result = await uploadQueue.add(() => uploadToServer(dataUrl, mime, filename, statusId, attempt));
       if (result?.success) {
         updateStatus(statusId, '✅ 成功');
         return result.url;
       }
-      
       throw new Error(result?.error || '上傳失敗');
     } catch (err) {
       console.warn(`上傳嘗試 ${attempt} 失敗:`, err.message);
@@ -342,14 +349,12 @@ async function uploadWithSmartRetry(file, statusId) {
         updateStatus(statusId, '❌ 失敗');
         throw new Error(`上傳失敗（已重試 ${CONFIG.RETRY_COUNT} 次）`);
       }
-      
       quality = Math.max(CONFIG.MIN_QUALITY, quality - 0.1);
       await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY_BASE * Math.pow(1.5, attempt - 1)));
     }
   }
 }
 
-// 上傳到伺服器 (Cloudflare Worker)
 async function uploadToServer(dataUrl, mime, filename, statusId, attempt) {
   const startTime = Date.now();
   try {
@@ -361,11 +366,9 @@ async function uploadToServer(dataUrl, mime, filename, statusId, attempt) {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    
     const result = await response.json();
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`上傳成功 (${duration}s):`, filename);
-    
     return result;
   } catch (err) {
     console.error(`上傳失敗 (嘗試 ${attempt}):`, err);
@@ -373,7 +376,6 @@ async function uploadToServer(dataUrl, mime, filename, statusId, attempt) {
   }
 }
 
-// 批量處理照片
 async function batchProcessPhotos(photos) {
   const results = [];
   for (const photo of photos) {
@@ -382,7 +384,6 @@ async function batchProcessPhotos(photos) {
       results.push(null);
       continue;
     }
-    
     try {
       const url = await uploadWithSmartRetry(input.files[0], photo.statusId);
       results.push(url);
@@ -391,7 +392,6 @@ async function batchProcessPhotos(photos) {
       throw err;
     }
   }
-  
   return results;
 }
 
@@ -405,6 +405,11 @@ function setupFormSubmit(config) {
   form.addEventListener('submit', async e => {
     e.preventDefault();
     
+    // [新增] 執行自定義驗證
+    if (config.validate && !config.validate()) {
+      return;
+    }
+    
     if (loadingEl) loadingEl.style.display = 'inline-block';
     setSubmitButtonState(submitBtn, true);
     
@@ -412,7 +417,6 @@ function setupFormSubmit(config) {
     
     try {
       const photoUrls = await batchProcessPhotos(config.photos);
-      
       const payload = config.getPayload();
       payload.photoUrls = photoUrls;
       
@@ -448,7 +452,6 @@ async function submitToBackend(apiPath, payload) {
     const error = await response.json();
     throw new Error(error.error || '提交失敗');
   }
-  
   return response.json();
 }
 
@@ -463,7 +466,6 @@ function handleSubmitError(err) {
   alert('❌ 送出失敗：' + (err.message || '未知錯誤'));
 }
 
-// 查詢功能
 async function searchRecords() {
   const date = val('queryDate');
   const company = val('queryCompany');
