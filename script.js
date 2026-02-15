@@ -1,3 +1,4 @@
+
 //================== 全域設定 ==================
 const CONFIG = {
   MAX_WIDTH: 1024,
@@ -14,26 +15,27 @@ const CONFIG = {
 // 表單配置
 const FORM_CONFIGS = {
   pre: {
-    formId: 'preForm',
-    loadingId: 'preFormLoading',
-    apiPath: '/api/submit-pre',
-    photos: [
-      { inputId: 'prePhoto1', statusId: 'prePhoto1Status' },
-      { inputId: 'prePhoto2', statusId: 'prePhoto2Status' }
-    ],
-    statusIds: ['prePhoto1Status', 'prePhoto2Status', 'preFormMsg'],
-    getPayload: () => ({
-      company: getFieldValue('preCompany'),
-      inputCompany: getFieldValue('preInputCompany'),
-      project: getFieldValue('preProject'),
-      inputProject: getFieldValue('preInputProject'),
-      department: getFieldValue('preDepartment'),
-      startTime: getFieldValue('preStartTime'),
-      endTime: getFieldValue('preEndTime'),
-      area: getFieldValue('preArea'),
-      location: getFieldValue('preLocation'),
-      restricted: getFieldValue('preRestricted'),
-      items: getFieldValue('preItems')
+    // ...
+    getPayload: () => {
+      // 取得勾選項目
+      const items = Array.from(document.querySelectorAll('input[name="fireItem"]:checked'))
+                         .map(el => el.value).join(', ');
+      
+      if (!items) throw new Error('請至少選擇一項動火項目');
+
+      return {
+        company: getFieldValue('preCompany'),
+        inputCompany: getFieldValue('preInputCompany'),
+        project: getFieldValue('preProject'),
+        inputProject: getFieldValue('preInputProject'),
+        uploader: getFieldValue('preUploader'), // 新增欄位
+        department: `${getFieldValue('preGroup')}-${getFieldValue('preSection')}`, // 組合字串
+        startTime: getFieldValue('preStartTime'),
+        endTime: getFieldValue('preEndTime'),
+        area: getFieldValue('preArea'),
+        location: getFieldValue('preLocation'),
+        restricted: getFieldValue('preRestricted'),
+        items: getFieldValue('preItems')
     })
   },
   during: {
@@ -134,6 +136,12 @@ function initDropdowns(data) {
   
   fillSelect('preArea', areas);
   fillSelect('preItems', items);
+  fillSelect('preGroup', Object.keys(orgData));
+  const container = document.getElementById('preItemsContainer');
+  container.innerHTML = '';
+  items.forEach(item => {
+    container.innerHTML += `<label style="font-weight:normal;"><input type="checkbox" name="fireItem" value="${item}"> ${item}</label>`;
+  });
   
   setupCompanyProjectLinks(companies);
 }
@@ -152,6 +160,15 @@ function fillSelect(id, options) {
   }
 }
 
+// 👇 建議加在這裡：主辦部門連動邏輯
+function onGroupChange() {
+  const group = getFieldValue('preGroup');
+  // GLOBAL_ORG_DATA 是從 API 載入的 GroupData 分頁資料
+  const sections = GLOBAL_ORG_DATA[group] || [];
+  fillSelect('preSection', sections);
+}
+
+
 function setupCompanyProjectLinks(companies) {
   const pairs = [
     { company: 'preCompany', project: 'preProject' },
@@ -168,6 +185,7 @@ function setupCompanyProjectLinks(companies) {
     });
   });
 }
+
 
 // ================== 工具函式 ==================
 function getFieldValue(id) {
@@ -442,3 +460,4 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
+
