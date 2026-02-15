@@ -36,6 +36,7 @@ const FORM_CONFIGS = {
       inputCompany: getFieldValue('preInputCompany'),
       project: getFieldValue('preProject'),
       inputProject: getFieldValue('preInputProject'),
+      uploader: getFieldValue('preUploader'),
       // 將組別與課別合併
       department: getFieldValue('preGroup') + ' ' + getFieldValue('preSection'),
       startTime: getFieldValue('preStartTime'),
@@ -510,3 +511,4 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
