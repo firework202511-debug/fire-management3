@@ -1,4 +1,4 @@
-// ================== 全域設定 ==================
+//================== 全域設定 ==================
 const CONFIG = {
   MAX_WIDTH: 1024,
   JPEG_QUALITY: 0.75,
@@ -7,14 +7,10 @@ const CONFIG = {
   RETRY_DELAY_BASE: 500,
   MAX_CONCURRENT_UPLOADS: 5,
   COMPRESSION_TIMEOUT: 8000,
-  // ⚠️ 請確認此處為您的 Cloudflare Worker 網址
+  // ⚠️ 重要：改成你的 Worker 網址
   API_ENDPOINT: 'https://fire-management-api.firework202511.workers.dev'
 };
-
-// 全域變數：儲存組課對照表
-let GLOBAL_ORG_DATA = {}; 
-
-// ================== 表單配置 ==================
+// 表單配置
 const FORM_CONFIGS = {
   pre: {
     formId: 'preForm',
@@ -25,39 +21,20 @@ const FORM_CONFIGS = {
       { inputId: 'prePhoto2', statusId: 'prePhoto2Status' }
     ],
     statusIds: ['prePhoto1Status', 'prePhoto2Status', 'preFormMsg'],
-    getPayload: () => {
-        // 1. 抓取複選框
-        const checkedBoxes = document.querySelectorAll('input[name="fireItem"]:checked');
-        const selectedItems = Array.from(checkedBoxes).map(cb => cb.value).join(', ');
-        
-        if (!selectedItems) {
-            throw new Error('請至少勾選一項動火項目');
-        }
-
-        // 2. 抓取主辦部門 (組-課)
-        const group = getFieldValue('preGroup');
-        const section = getFieldValue('preSection');
-        
-        // 檢查是否選擇了組與課
-        if (!group || !section) {
-            throw new Error('請完整選擇主辦單位 (組與課)');
-        }
-
-        return {
-          company: getFieldValue('preCompany'),
-          inputCompany: getFieldValue('preInputCompany'),
-          project: getFieldValue('preProject'),
-          inputProject: getFieldValue('preInputProject'),
-          uploader: getFieldValue('preUploader'), // 上傳者姓名
-          department: `${group}-${section}`,      // 組合字串 (組-課)
-          startTime: getFieldValue('preStartTime'),
-          endTime: getFieldValue('preEndTime'),
-          area: getFieldValue('preArea'),
-          location: getFieldValue('preLocation'),
-          restricted: getFieldValue('preRestricted'),
-          items: selectedItems // 複選結果
-        };
-    }
+    getPayload: () => ({
+      company: getFieldValue('preCompany'),
+      inputCompany: getFieldValue('preInputCompany'),
+      project: getFieldValue('preProject'),
+      inputProject: getFieldValue('preInputProject'),
+      // [修改] 將組別與課別合併為一個字串送出，符合後端與Sheet格式
+      department: getFieldValue('preGroup') + ' ' + getFieldValue('preSection'),
+      startTime: getFieldValue('preStartTime'),
+      endTime: getFieldValue('preEndTime'),
+      area: getFieldValue('preArea'),
+      location: getFieldValue('preLocation'),
+      restricted: getFieldValue('preRestricted'),
+      items: getFieldValue('preItems')
+    })
   },
   during: {
     formId: 'duringForm',
@@ -71,6 +48,7 @@ const FORM_CONFIGS = {
     getPayload: () => ({
       company: getFieldValue('duringCompany'),
       project: getFieldValue('duringProject'),
+      location: getFieldValue('duringLocation'), 
       q1: getFieldValue('q1')
     })
   },
@@ -86,13 +64,13 @@ const FORM_CONFIGS = {
     getPayload: () => ({
       company: getFieldValue('afterCompany'),
       project: getFieldValue('afterProject'),
+      location: getFieldValue('afterLocation'),
       qTime: getFieldValue('qTime'),
       qYesNo: getFieldValue('qYesNo')
     })
   }
 };
-
-// ================== 上傳隊列管理器 ==================
+// 上傳隊列管理器
 class UploadQueue {
   constructor(maxConcurrent) {
     this.maxConcurrent = maxConcurrent;
@@ -127,103 +105,50 @@ class UploadQueue {
 
 const uploadQueue = new UploadQueue(CONFIG.MAX_CONCURRENT_UPLOADS);
 
-// ================== 初始化與下拉選單邏輯 ==================
+// ================== 初始化 ==================
 async function initApp() {
   try {
     const response = await fetch(`${CONFIG.API_ENDPOINT}/api/dropdown-data`);
-    if (!response.ok) throw new Error('API 回應錯誤');
+    if (!response.ok) throw new Error('載入失敗');
     
     const data = await response.json();
-    
-    if (data.error) {
-      console.error('API 錯誤:', data.details);
-      alert('無法載入選單，請稍後再試');
-      return;
-    }
-
     initDropdowns(data);
-
-    // 設定預設查詢日期為今天
     const today = new Date().toISOString().split('T')[0];
     const queryDateEl = document.getElementById('queryDate');
     if (queryDateEl) queryDateEl.value = today;
   } catch (err) {
     console.error('初始化失敗:', err);
-    // 這裡不跳出 alert 避免干擾，但會在 console 顯示錯誤
+    alert('載入下拉選單失敗，請重新整理頁面');
   }
 }
 
 function initDropdowns(data) {
-  const { companies, areas, items, orgData } = data;
+  const { companies, areas, items, groups } = data; // [修改] 解構出 groups
   
-  // 1. 儲存組織資料到全域變數
-  GLOBAL_ORG_DATA = orgData || {};
-
-  // 2. 填入公司選單
   ['preCompany', 'duringCompany', 'afterCompany', 'queryCompany'].forEach(id => {
     fillSelect(id, Object.keys(companies));
   });
   
-  // 3. 填入主辦部門 - "組別" 選單
-  fillSelect('preGroup', Object.keys(GLOBAL_ORG_DATA));
-  
-  // 4. 填入區域選單
   fillSelect('preArea', areas);
+  fillSelect('preItems', items);
   
-  // 5. 填入動火項目 (產生 Checkboxes)
-  const itemsContainer = document.getElementById('preItemsContainer');
-  if (itemsContainer) {
-    itemsContainer.innerHTML = ''; // 清空
-    if (items && items.length > 0) {
-      items.forEach(item => {
-        const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '5px';
-        label.style.fontSize = '0.95em';
-        label.style.cursor = 'pointer';
-        
-        label.innerHTML = `
-          <input type="checkbox" name="fireItem" value="${item}">
-          ${item}
-        `;
-        itemsContainer.appendChild(label);
-      });
-    } else {
-        itemsContainer.innerHTML = '<div>無項目可選</div>';
-    }
+  // [新增] 初始化組別選單
+  if (groups) {
+    fillSelect('preGroup', Object.keys(groups));
+    setupGroupSectionLinks(groups); // 設定組別與課別的連動
   }
 
-  // 6. 設定公司與工程連動
   setupCompanyProjectLinks(companies);
+  setupLocationFetcher();
 }
 
 function fillSelect(id, options) {
   const el = document.getElementById(id);
   if (!el) return;
   el.innerHTML = '<option value="">請選擇</option>';
-  if(options) {
-      options.forEach(opt => el.add(new Option(opt, opt)));
-  }
-  // 只有非查詢、非組別、非課別選單才加「其他」
+  options.forEach(opt => el.add(new Option(opt, opt)));
   if (id !== 'queryCompany' && id !== 'preGroup' && id !== 'preSection') {
     el.add(new Option('其他', '其他'));
-  }
-}
-
-// 主辦部門連動邏輯 (組 -> 課)
-function onGroupChange() {
-  const group = document.getElementById('preGroup').value;
-  // 從全域變數抓取該組底下的課
-  const sections = GLOBAL_ORG_DATA[group] || [];
-  
-  // 更新 "課別" 選單
-  const sectionSelect = document.getElementById('preSection');
-  if (sectionSelect) {
-      sectionSelect.innerHTML = '<option value="">請選擇課別</option>';
-      sections.forEach(sec => {
-          sectionSelect.add(new Option(sec, sec));
-      });
   }
 }
 
@@ -244,7 +169,76 @@ function setupCompanyProjectLinks(companies) {
   });
 }
 
-// ================== 工具函式與圖片處理 ==================
+// [新增] 設定組別與課別的連動
+function setupGroupSectionLinks(groups) {
+    const groupEl = document.getElementById('preGroup');
+    const sectionEl = document.getElementById('preSection');
+    
+    if(!groupEl || !sectionEl) return;
+
+    groupEl.addEventListener('change', () => {
+        const selectedGroup = groupEl.value;
+        const sections = groups[selectedGroup] || [];
+        
+        // 清空課別並重填
+        sectionEl.innerHTML = '<option value="">請選擇</option>';
+        sections.forEach(sec => {
+            sectionEl.add(new Option(sec, sec));
+        });
+    });
+}
+
+// 設定工程名稱改變時，自動抓取地點
+function setupLocationFetcher() {
+  const configs = [
+    { companyId: 'duringCompany', projectId: 'duringProject', locationId: 'duringLocation' },
+    { companyId: 'afterCompany', projectId: 'afterProject', locationId: 'afterLocation' }
+  ];
+
+  configs.forEach(({ companyId, projectId, locationId }) => {
+    const projectEl = document.getElementById(projectId);
+    const companyEl = document.getElementById(companyId);
+    
+    projectEl.addEventListener('change', async () => {
+      const company = companyEl.value;
+      const project = projectEl.value;
+      const locationEl = document.getElementById(locationId);
+      
+      if (!company || !project) {
+        locationEl.innerHTML = '<option value="">請先選擇公司與工程</option>';
+        return;
+      }
+
+      locationEl.innerHTML = '<option value="">搜尋中...</option>';
+      locationEl.disabled = true;
+
+      try {
+        const url = new URL(`${CONFIG.API_ENDPOINT}/api/get-today-locations`);
+        url.searchParams.append('company', company);
+        url.searchParams.append('project', project);
+
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        locationEl.innerHTML = '<option value="">請選擇地點</option>';
+        if (data.locations && data.locations.length > 0) {
+          data.locations.forEach(loc => {
+            locationEl.add(new Option(loc, loc));
+          });
+        } else {
+          locationEl.add(new Option('查無今日動火前紀錄', ''));
+        }
+      } catch (err) {
+        console.error('地點載入失敗', err);
+        locationEl.innerHTML = '<option value="">載入失敗</option>';
+      } finally {
+        locationEl.disabled = false;
+      }
+    });
+  });
+}
+
+// ================== 工具函式 ==================
 function getFieldValue(id) {
   return document.getElementById(id)?.value || '';
 }
@@ -469,7 +463,7 @@ function handleSubmitError(err) {
   alert('❌ 送出失敗：' + (err.message || '未知錯誤'));
 }
 
-// ================== 查詢功能 ==================
+// 查詢功能
 async function searchRecords() {
   const date = val('queryDate');
   const company = val('queryCompany');
@@ -507,14 +501,10 @@ async function searchRecords() {
 }
 
 function val(id) { return document.getElementById(id)?.value || ''; }
-
-// ================== 初始化執行 ==================
-// 綁定所有表單提交事件
-Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
-
-// 頁面載入時初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
   initApp();
 }
+
+Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
