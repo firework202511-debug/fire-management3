@@ -497,7 +497,7 @@ async function searchRecords() {
         return; 
     }
 
-    let html = `<table class="result-table"><thead><tr><th>時機</th><th>公司</th><th>工程</th><th>時間</th><th>地點</th><th>照片1</th><th>照片2</th></tr></thead><tbody>`;
+    let html = `<table class="result-table"><thead><tr><th>時機</th><th>公司</th><th>工程</th><th>主辦姓名</th><th>時間</th><th>地點</th><th>照片1</th><th>照片2</th></tr></thead><tbody>`;
     
     json.data.forEach(Row => {
       const badge = Row.type==='動火前'?'badge-pre':(Row.type==='動火中'?'badge-during':'badge-after');
@@ -507,6 +507,7 @@ async function searchRecords() {
         <td data-label="時機"><span class="badge ${badge}">${Row.type}</span></td>
         <td data-label="公司">${Row.company}</td>
         <td data-label="工程">${Row.project}</td>
+        <td data-label="主辦姓名">${Row.uploader}</td>
         <td data-label="時間">${Row.time.split(' ')[0]}<br>${Row.time.split(' ')[1]} ${Row.time.split(' ')[2]}</td>
         <td data-label="地點">${Row.location}</td>
         <td data-label="照片1">${p1}</td>
@@ -531,3 +532,4 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
