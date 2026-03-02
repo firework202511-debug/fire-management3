@@ -495,16 +495,25 @@ async function deleteRecord(sheetType, rowIndex) {
   if (!confirm('⚠️ 警告：確定要刪除這筆紀錄嗎？這將會清除雲端資料庫中的資料，且無法復原！')) return;
   try {
     const res = await fetch(`${CONFIG.API_ENDPOINT}/api/admin/delete-record`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sheetType, rowIndex })
     });
-    if (!res.ok) throw new Error('刪除失敗');
+    
+    const data = await res.json(); // 取得後端詳細的回傳資訊
+    
+    if (!res.ok) {
+        // 如果失敗，拋出後端寫明的具體錯誤原因
+        throw new Error(data.error || '未知錯誤');
+    }
+    
     alert('✅ 資料已成功刪除');
     searchRecords(); 
-  } catch (err) { alert('❌ 刪除發生錯誤: ' + err.message); }
+  } catch (err) { 
+    alert('❌ 刪除發生錯誤: ' + err.message); 
+  }
 }
 
-// ================== 查詢邏輯 ==================
 // ================== 查詢邏輯 ==================
 async function searchRecords() {
   const date = val('queryDate');
@@ -587,6 +596,7 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
 
 
 
