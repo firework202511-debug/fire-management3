@@ -505,12 +505,13 @@ async function deleteRecord(sheetType, rowIndex) {
 }
 
 // ================== 查詢邏輯 ==================
+// ================== 查詢邏輯 ==================
 async function searchRecords() {
   const date = val('queryDate');
   const company = val('queryCompany');
   const div = document.getElementById('queryResults');
   
-  // [修改] 驗證邏輯：兩者不能同時為空
+  // 驗證邏輯：兩者不能同時為空
   if (!date && !company) {
     alert('請至少輸入「查詢日期」或選擇「公司名稱」');
     return;
@@ -521,21 +522,21 @@ async function searchRecords() {
   
   try {
     const url = new URL(`${CONFIG.API_ENDPOINT}/api/search-records`);
-    // [修改] 只有當參數有值時才 append
+    // 只有當參數有值時才 append
     if (date) url.searchParams.append('date', date);
     if (company) url.searchParams.append('company', company);
     
     const res = await fetch(url);
     const json = await res.json();
     
-    if (json.error) { throw new Error(json.error); } // 處理後端拋出的錯誤
+    if (json.error) { throw new Error(json.error); } 
 
     if(!json.data || json.data.length === 0) { 
         div.innerHTML = '<div style="text-align:center;padding:20px">查無資料</div>'; 
         return; 
     }
 
-    // [關鍵修改] 判斷如果是管理員，表頭增加「操作」欄位
+    // 判斷如果是管理員，表頭增加「操作」欄位
     let tableHead = `<tr><th>時機</th><th>公司</th><th>工程</th><th>主辦姓名</th><th>時間</th><th>地點</th><th>照片1</th><th>照片2</th>`;
     if (isAdmin) tableHead += `<th>操作 (管理員)</th>`;
     tableHead += `</tr>`;
@@ -547,12 +548,15 @@ async function searchRecords() {
       const p1 = Row.photo1 ? `<a href="${Row.photo1}" target="_blank" class="photo-icon" title="預覽">📷</a>` : '-';
       const p2 = Row.photo2 ? `<a href="${Row.photo2}" target="_blank" class="photo-icon" title="預覽">📷</a>` : '-';
       
-      // [關鍵修改] 判斷如果是管理員，每一列增加「刪除」按鈕
+      // ✅ 這裡修復了遺失的括號與結尾標籤
       let adminActions = '';
       if (isAdmin) {
         adminActions = `<td data-label="操作">
           <button onclick="deleteRecord('${Row.sheetType}', ${Row.rowIndex})" style="background:#e53e3e; color:white; padding:4px 8px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9em; width:100%;">刪除</button>
-  
+        </td>`;
+      }
+
+      // ✅ 這裡補回了 ${adminActions} 讓刪除按鈕顯示出來
       html += `<tr>
         <td data-label="時機"><span class="badge ${badge}">${Row.type}</span></td>
         <td data-label="公司">${Row.company}</td>
@@ -562,6 +566,7 @@ async function searchRecords() {
         <td data-label="地點">${Row.location}</td>
         <td data-label="照片1">${p1}</td>
         <td data-label="照片2">${p2}</td>
+        ${adminActions}
       </tr>`;
     });
     div.innerHTML = html + '</tbody></table>';
