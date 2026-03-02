@@ -567,6 +567,20 @@
         <div id="afterFormMsg" class="status"></div>
       </form>
     </div> <div id="queryFormContainer" class="form-container">
+
+    <div class="form-group" style="background:#f0f4ff; padding:15px; border-radius:8px; border: 1px solid #c3d4ff;">
+        <label>🛠️ 後台管理登入 (刪除模式)</label>
+        <div id="loginFormUI" style="display:flex; gap:10px;">
+          <input type="text" id="adminAcc" placeholder="請輸入帳號" style="flex:1;">
+          <input type="password" id="adminPwd" placeholder="請輸入密碼" style="flex:1;">
+          <button type="button" onclick="adminLogin()" style="padding:10px 20px; background:#4a5568; color:white; border:none; border-radius:5px; cursor:pointer;">登入</button>
+        </div>
+        <div id="adminStatusUI" style="color:green; font-weight:bold; display:none; align-items:center; justify-content:space-between;">
+          <span>✅ 已解鎖最高權限 (管理員模式)</span>
+          <button type="button" onclick="adminLogout()" style="padding:5px 15px; background:#e53e3e; color:white; border:none; border-radius:5px; cursor:pointer;">登出</button>
+        </div>
+      </div>
+      <hr style="margin-bottom: 20px; border: 0; border-top: 1px solid #eee;">
       
       <div class="form-group">
         <label>查詢日期 (若查單一公司近況可不填)</label>
@@ -597,5 +611,6 @@
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
