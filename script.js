@@ -552,8 +552,6 @@ async function searchRecords() {
       if (isAdmin) {
         adminActions = `<td data-label="操作">
           <button onclick="deleteRecord('${Row.sheetType}', ${Row.rowIndex})" style="background:#e53e3e; color:white; padding:4px 8px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9em; width:100%;">刪除</button>
-        </td>`;
-      }
   
       html += `<tr>
         <td data-label="時機"><span class="badge ${badge}">${Row.type}</span></td>
@@ -584,6 +582,7 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
 
 
 
