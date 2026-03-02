@@ -535,12 +535,26 @@ async function searchRecords() {
         return; 
     }
 
-    let html = `<table class="result-table"><thead><tr><th>時機</th><th>公司</th><th>工程</th><th>主辦姓名</th><th>時間</th><th>地點</th><th>照片1</th><th>照片2</th></tr></thead><tbody>`;
+    // [關鍵修改] 判斷如果是管理員，表頭增加「操作」欄位
+    let tableHead = `<tr><th>時機</th><th>公司</th><th>工程</th><th>主辦姓名</th><th>時間</th><th>地點</th><th>照片1</th><th>照片2</th>`;
+    if (isAdmin) tableHead += `<th>操作 (管理員)</th>`;
+    tableHead += `</tr>`;
+    
+    let html = `<table class="result-table"><thead>${tableHead}</thead><tbody>`;
     
     json.data.forEach(Row => {
       const badge = Row.type==='動火前'?'badge-pre':(Row.type==='動火中'?'badge-during':'badge-after');
       const p1 = Row.photo1 ? `<a href="${Row.photo1}" target="_blank" class="photo-icon" title="預覽">📷</a>` : '-';
       const p2 = Row.photo2 ? `<a href="${Row.photo2}" target="_blank" class="photo-icon" title="預覽">📷</a>` : '-';
+      
+      // [關鍵修改] 判斷如果是管理員，每一列增加「刪除」按鈕
+      let adminActions = '';
+      if (isAdmin) {
+        adminActions = `<td data-label="操作">
+          <button onclick="deleteRecord('${Row.sheetType}', ${Row.rowIndex})" style="background:#e53e3e; color:white; padding:4px 8px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9em; width:100%;">刪除</button>
+        </td>`;
+      }
+  
       html += `<tr>
         <td data-label="時機"><span class="badge ${badge}">${Row.type}</span></td>
         <td data-label="公司">${Row.company}</td>
@@ -570,5 +584,6 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
 
 
