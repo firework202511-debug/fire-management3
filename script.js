@@ -467,6 +467,44 @@ function handleSubmitError(err) {
   alert('❌ 送出失敗：' + (err.message || '未知錯誤'));
 }
 
+// ================== 後台管理邏輯 ==================
+let isAdmin = false;
+
+function adminLogin() {
+  const acc = document.getElementById('adminAcc').value;
+  const pwd = document.getElementById('adminPwd').value;
+  if (acc === 'admin' && pwd === 'safe1234') {
+    isAdmin = true;
+    document.getElementById('loginFormUI').style.display = 'none';
+    document.getElementById('adminStatusUI').style.display = 'flex';
+    document.getElementById('adminAcc').value = ''; document.getElementById('adminPwd').value = '';
+    alert('登入成功！已解鎖刪除功能。');
+    if (document.getElementById('queryResults').innerHTML !== '') searchRecords();
+  } else { alert('帳號或密碼錯誤！'); }
+}
+
+function adminLogout() {
+  isAdmin = false;
+  document.getElementById('loginFormUI').style.display = 'flex';
+  document.getElementById('adminStatusUI').style.display = 'none';
+  alert('已登出管理員模式。');
+  if (document.getElementById('queryResults').innerHTML !== '') searchRecords();
+}
+
+async function deleteRecord(sheetType, rowIndex) {
+  if (!confirm('⚠️ 警告：確定要刪除這筆紀錄嗎？這將會清除雲端資料庫中的資料，且無法復原！')) return;
+  try {
+    const res = await fetch(`${CONFIG.API_ENDPOINT}/api/admin/delete-record`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sheetType, rowIndex })
+    });
+    if (!res.ok) throw new Error('刪除失敗');
+    alert('✅ 資料已成功刪除');
+    searchRecords(); 
+  } catch (err) { alert('❌ 刪除發生錯誤: ' + err.message); }
+}
+
+// ================== 查詢邏輯 ==================
 async function searchRecords() {
   const date = val('queryDate');
   const company = val('queryCompany');
@@ -532,4 +570,5 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
+
 
