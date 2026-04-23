@@ -130,6 +130,9 @@ async function initApp() {
     const today = new Date().toISOString().split('T')[0];
     const queryDateEl = document.getElementById('queryDate');
     if (queryDateEl) queryDateEl.value = today;
+
+    // ✅ 注入「未完成動火提醒」UI
+    injectIncompleteReminderUI();
   } catch (err) {
     console.error('初始化失敗:', err);
     alert('載入下拉選單失敗，請重新整理頁面');
@@ -588,7 +591,204 @@ async function searchRecords() {
   }
 }
 
-function val(id) { return document.getElementById(id)?.value || ''; }
+// ================== 未完成動火提醒 UI ==================
+
+/**
+ * 在查詢區塊頂部注入「未完成動火提醒」按鈕與面板。
+ * 掛載點：queryDate 輸入框所在的父容器（預設找 #queryDate 往上兩層）。
+ */
+function injectIncompleteReminderUI() {
+  // 避免重複注入
+  if (document.getElementById('incompletePanel')) return;
+
+  // ── CSS ──
+  const style = document.createElement('style');
+  style.textContent = `
+    #incompleteBtn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 14px; border-radius:6px; font-size:.82rem; font-weight:600;
+      font-family:inherit; cursor:pointer; border:none;
+      background:#b45309; color:#fff; transition:background .15s;
+    }
+    #incompleteBtn:hover { background:#9a4508; }
+    #incReminderRow {
+      display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;
+      margin-bottom:12px; padding:0 4px;
+    }
+    #incDateWrap { display:flex; flex-direction:column; gap:4px; }
+    #incDateWrap label { font-size:.72rem; font-weight:600; color:#8e97aa; }
+    #incDate {
+      padding:6px 10px; border:1.5px solid #dde1ea; border-radius:6px;
+      font-size:.82rem; font-family:inherit; color:#141820;
+      background:#fff; outline:none; width:160px;
+    }
+    #incDate:focus { border-color:#3664c8; }
+    #incompletePanel {
+      display:none; margin-top:18px;
+      background:#fff; border:1px solid #b45309; border-radius:16px;
+      overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08);
+    }
+    #incompletePanel.show { display:block; }
+    .inc-ap-hd {
+      background:#fffbeb; padding:14px 20px;
+      display:flex; align-items:center; gap:10px;
+      border-bottom:1px solid #b45309;
+    }
+    .inc-ap-hd h3 { font-size:.9rem; font-weight:700; color:#b45309; margin:0; }
+    .inc-ap-hd p  { font-size:.73rem; color:#b45309; margin:2px 0 0; opacity:.85; }
+    .inc-ap-hd .close-btn {
+      margin-left:auto; padding:4px 10px; border-radius:6px; font-size:.76rem;
+      font-weight:600; font-family:inherit; cursor:pointer;
+      border:1.5px solid #dde1ea; background:transparent; color:#4b5465;
+    }
+    .inc-ap-hd .close-btn:hover { background:#f0f2f6; }
+    #incompleteBd { padding:16px 20px; }
+    .incomplete-item {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:10px 14px; border-radius:8px; margin-bottom:8px;
+      background:#f0f2f6; border:1px solid #dde1ea;
+    }
+    .incomplete-item:last-of-type { margin-bottom:0; }
+    .inc-ico  { font-size:1.1rem; flex-shrink:0; margin-top:2px; }
+    .inc-body { flex:1; }
+    .inc-co   { font-size:.86rem; font-weight:700; color:#141820; }
+    .inc-prj  { font-size:.75rem; color:#4b5465; margin-top:2px; }
+    .inc-tags { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+    .inc-tag  { font-size:.66rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+    .inc-tag.ok   { background:#ebfaf4; color:#0f7b5a; }
+    .inc-tag.miss { background:#fdf2f1; color:#c0392b; }
+  `;
+  document.head.appendChild(style);
+
+  // ── 按鈕列 ──
+  const row = document.createElement('div');
+  row.id = 'incReminderRow';
+  row.innerHTML = `
+    <div id="incDateWrap">
+      <label>查詢日期（空白＝今日）</label>
+      <input type="date" id="incDate">
+    </div>
+    <button id="incompleteBtn" onclick="checkIncomplete()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      未完成動火提醒
+    </button>
+  `;
+
+  // ── 結果面板 ──
+  const panel = document.createElement('div');
+  panel.id = 'incompletePanel';
+  panel.innerHTML = `
+    <div class="inc-ap-hd">
+      <svg width="18" height="18" fill="none" stroke="#b45309" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      <div>
+        <h3 id="incPanelTitle">當日未完成動火提醒</h3>
+        <p  id="incPanelDate">— 年 — 月 — 日</p>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('incompletePanel').classList.remove('show')">關閉</button>
+    </div>
+    <div id="incompleteBd"><div style="text-align:center;padding:20px;color:#8e97aa">⏳ 載入中…</div></div>
+  `;
+
+  // 掛載：插在 queryResults 之前（或找 queryDate 的父容器）
+  const anchor = document.getElementById('queryResults') || document.getElementById('queryDate')?.closest('div');
+  if (anchor && anchor.parentNode) {
+    anchor.parentNode.insertBefore(row, anchor);
+    anchor.parentNode.insertBefore(panel, anchor);
+  } else {
+    // 找不到掛載點時 fallback 到 body 末尾
+    document.body.appendChild(row);
+    document.body.appendChild(panel);
+  }
+}
+
+/** 點擊「未完成動火提醒」按鈕時呼叫 */
+async function checkIncomplete() {
+  const inputDate = document.getElementById('incDate')?.value || '';
+  const panel     = document.getElementById('incompletePanel');
+  const bd        = document.getElementById('incompleteBd');
+  const titleEl   = document.getElementById('incPanelTitle');
+  const dateEl    = document.getElementById('incPanelDate');
+
+  if (!panel || !bd) return;
+
+  // 顯示面板、捲動到位
+  panel.classList.add('show');
+  bd.innerHTML = '<div style="text-align:center;padding:20px;color:#8e97aa">⏳ 查詢中…</div>';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // 更新標題日期
+  const targetDate = inputDate || new Date().toLocaleDateString('zh-TW', {
+    timeZone:'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit'
+  }).replace(/\//g, '-');
+
+  const d       = new Date(targetDate + 'T00:00:00');
+  const isToday = targetDate === new Date().toLocaleDateString('zh-TW', {
+    timeZone:'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit'
+  }).replace(/\//g, '-');
+
+  dateEl.textContent  = `${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`;
+  titleEl.textContent = isToday ? '當日未完成動火提醒' : `${d.getMonth()+1}/${d.getDate()} 動火完成狀況`;
+
+  try {
+    const url = new URL(`${CONFIG.API_ENDPOINT}/api/check-incomplete`);
+    if (inputDate) url.searchParams.set('date', inputDate);
+    const json = await fetch(url).then(r => r.json());
+
+    if (!json.success) throw new Error(json.error || '查詢失敗');
+
+    const { incomplete, complete, total } = json;
+
+    if (total === 0) {
+      bd.innerHTML = `<div style="text-align:center;padding:20px;color:#8e97aa">
+        📭 ${isToday ? '今日' : '該日期'}尚無任何動火前通報記錄</div>`;
+      return;
+    }
+
+    if (incomplete.length === 0) {
+      bd.innerHTML = `<div style="text-align:center;padding:16px;color:#0f7b5a;font-weight:700">
+        🎉 ${isToday ? '今日' : '該日期'}所有廠商動火通報均已完整（共 ${complete.length} 筆）</div>`;
+      return;
+    }
+
+    const items = incomplete.map(e => {
+      const icon = e.hasDuring ? '🟡' : '🔴';
+      const tags = [
+        `<span class="inc-tag ok">✓ 動火前</span>`,
+        `<span class="inc-tag ${e.hasDuring ? 'ok' : 'miss'}">${e.hasDuring ? '✓' : '✗'} 動火中</span>`,
+        `<span class="inc-tag ${e.hasAfter  ? 'ok' : 'miss'}">${e.hasAfter  ? '✓' : '✗'} 動火後</span>`,
+      ].join('');
+      return `<div class="incomplete-item">
+        <div class="inc-ico">${icon}</div>
+        <div class="inc-body">
+          <div class="inc-co">${e.company}</div>
+          <div class="inc-prj">${e.project || '—'}</div>
+          <div class="inc-tags">${tags}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const completedNote = complete.length > 0
+      ? `<p style="font-size:.74rem;color:#8e97aa;margin-top:14px">另有 ${complete.length} 筆廠商通報已全部完成 ✓</p>`
+      : '';
+
+    bd.innerHTML = `
+      <p style="font-size:.78rem;color:#4b5465;margin-bottom:14px">
+        共發現 <strong style="color:#c0392b">${incomplete.length}</strong> 筆通報尚未完成（全部 ${total} 筆）
+      </p>
+      ${items}
+      ${completedNote}
+    `;
+  } catch (err) {
+    console.error('checkIncomplete 失敗:', err);
+    bd.innerHTML = `<div style="text-align:center;padding:20px;color:#c0392b">❌ 查詢失敗：${err.message}</div>`;
+  }
+}
+
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
@@ -596,8 +796,3 @@ if (document.readyState === 'loading') {
 }
 
 Object.values(FORM_CONFIGS).forEach(setupFormSubmit);
-
-
-
-
-
