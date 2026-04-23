@@ -755,11 +755,11 @@ async function checkIncomplete() {
     }
 
     const items = incomplete.map(e => {
-      const icon = e.hasDuring ? '🟡' : '🔴';
+      const icon = !e.hasPre ? '🔴' : (!e.hasDuring ? '🟠' : '🟡');
       const tags = [
-        `<span class="inc-tag ok">✓ 動火前</span>`,
-        `<span class="inc-tag ${e.hasDuring ? 'ok' : 'miss'}">${e.hasDuring ? '✓' : '✗'} 動火中</span>`,
-        `<span class="inc-tag ${e.hasAfter  ? 'ok' : 'miss'}">${e.hasAfter  ? '✓' : '✗'} 動火後</span>`,
+        `<span class="inc-tag ${e.hasPre     ? 'ok' : 'miss'}">${e.hasPre     ? '✓' : '✗'} 動火前</span>`,
+        `<span class="inc-tag ${e.hasDuring  ? 'ok' : 'miss'}">${e.hasDuring  ? '✓' : '✗'} 動火中</span>`,
+        `<span class="inc-tag ${e.hasAfter   ? 'ok' : 'miss'}">${e.hasAfter   ? '✓' : '✗'} 動火後</span>`,
       ].join('');
       return `<div class="incomplete-item">
         <div class="inc-ico">${icon}</div>
@@ -788,6 +788,8 @@ async function checkIncomplete() {
   }
 }
 
+
+function val(id) { return document.getElementById(id)?.value || ''; }
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
