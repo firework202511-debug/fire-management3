@@ -133,6 +133,8 @@ async function initApp() {
 
     // ✅ 注入「未完成動火提醒」UI
     injectIncompleteReminderUI();
+    // ✅ 注入「每日總報表」按鈕
+    injectDailyReportButton();
   } catch (err) {
     console.error('初始化失敗:', err);
     alert('載入下拉選單失敗，請重新整理頁面');
@@ -611,6 +613,14 @@ function injectIncompleteReminderUI() {
       background:#b45309; color:#fff; transition:background .15s;
     }
     #incompleteBtn:hover { background:#9a4508; }
+    #dailyReportBtn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 14px; border-radius:6px; font-size:.82rem; font-weight:600;
+      font-family:inherit; cursor:pointer; border:none;
+      background:#1e5fa8; color:#fff; transition:background .15s;
+    }
+    #dailyReportBtn:hover { background:#174d8a; }
+    #dailyReportBtn:disabled { background:#8e97aa; cursor:not-allowed; }
     #incReminderRow {
       display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap;
       margin-bottom:12px; padding:0 4px;
@@ -673,6 +683,13 @@ function injectIncompleteReminderUI() {
         <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       </svg>
       未完成動火提醒
+    </button>
+    <button id="dailyReportBtn" onclick="generateDailyReport()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+      產生每日報表
     </button>
   `;
 
@@ -788,6 +805,187 @@ async function checkIncomplete() {
   }
 }
 
+
+function injectDailyReportButton() {
+  // 按鈕已在 injectIncompleteReminderUI 的按鈕列中一起注入，此處無需額外 DOM
+}
+
+/** 點擊「產生每日報表」時呼叫：開新視窗並渲染可列印的 PDF 報表 */
+async function generateDailyReport() {
+  const btn       = document.getElementById('dailyReportBtn');
+  const inputDate = document.getElementById('incDate')?.value || '';
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 產生中…'; }
+
+  try {
+    const url = new URL(`${CONFIG.API_ENDPOINT}/api/daily-report`);
+    if (inputDate) url.searchParams.set('date', inputDate);
+    const json = await fetch(url).then(r => r.json());
+    if (!json.success) throw new Error(json.error || '查詢失敗');
+
+    const { records, date } = json;
+
+    if (records.length === 0) {
+      alert(`📭 ${date} 當日尚無任何動火記錄`);
+      return;
+    }
+
+    const dateLabel = date.replace(/\//g, ' / ');
+
+    const photoCard = (url, label) => {
+      if (!url) return `<div class="photo-slot empty"><span>${label}<br>（無照片）</span></div>`;
+      return `<div class="photo-slot">
+        <img src="${url}" alt="${label}" onerror="this.parentElement.classList.add('empty');this.remove()">
+        <span class="photo-label">${label}</span>
+      </div>`;
+    };
+
+    const cards = records.map((r, i) => {
+      const status = [
+        r.hasPre    ? '<span class="tag ok">✓ 動火前</span>' : '<span class="tag miss">✗ 動火前</span>',
+        r.hasDuring ? '<span class="tag ok">✓ 動火中</span>' : '<span class="tag miss">✗ 動火中</span>',
+        r.hasAfter  ? '<span class="tag ok">✓ 動火後</span>' : '<span class="tag miss">✗ 動火後</span>',
+      ].join('');
+      return `
+      <div class="record-card">
+        <div class="card-header">
+          <div class="card-no">${String(i + 1).padStart(2, '0')}</div>
+          <div class="card-info">
+            <div class="card-company">${r.company}</div>
+            <div class="card-project">${r.project || '—'}</div>
+            <div class="card-meta">${r.department ? r.department + '　' : ''}${r.area ? '區域：' + r.area : ''}${r.startTime ? '　' + r.startTime + '～' + r.endTime : ''}</div>
+          </div>
+          <div class="card-status">${status}</div>
+        </div>
+        <div class="photos-grid">
+          <div class="phase-group">
+            <div class="phase-title">作業前</div>
+            <div class="phase-photos">
+              ${photoCard(r.prePhotos[0], '氣體偵測器')}
+              ${photoCard(r.prePhotos[1], '防護設備')}
+            </div>
+          </div>
+          <div class="phase-group">
+            <div class="phase-title">作業中</div>
+            <div class="phase-photos">
+              ${photoCard(r.duringPhotos[0], '作業中照片 1')}
+              ${photoCard(r.duringPhotos[1], '作業中照片 2')}
+            </div>
+          </div>
+          <div class="phase-group">
+            <div class="phase-title">作業後</div>
+            <div class="phase-photos">
+              ${photoCard(r.afterPhotos[0], '作業後照片 1')}
+              ${photoCard(r.afterPhotos[1], '作業後照片 2')}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>動火作業日報表 ${dateLabel}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+         background: #f0f2f6; color: #141820; font-size: 13px; }
+  .cover {
+    background: linear-gradient(135deg, #3664c8 0%, #5b3fa8 100%);
+    color: #fff; padding: 48px 40px; text-align: center; page-break-after: always;
+  }
+  .cover h1 { font-size: 2rem; letter-spacing: 4px; margin-bottom: 16px; }
+  .cover .date { font-size: 1.1rem; opacity: .85; }
+  .cover .total { margin-top: 24px; font-size: .9rem; opacity: .7; }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+  .record-card {
+    background: #fff; border-radius: 12px; margin-bottom: 28px;
+    overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    page-break-inside: avoid;
+  }
+  .card-header {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px; border-bottom: 1px solid #eef0f5; background: #f7f8fc;
+  }
+  .card-no { font-size: 1.4rem; font-weight: 800; color: #3664c8; min-width: 36px; padding-top: 2px; }
+  .card-info { flex: 1; }
+  .card-company { font-size: 1rem; font-weight: 700; }
+  .card-project { font-size: .82rem; color: #4b5465; margin-top: 3px; }
+  .card-meta    { font-size: .72rem; color: #8e97aa; margin-top: 4px; }
+  .card-status  { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 2px; }
+  .tag { font-size: .65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .tag.ok   { background: #ebfaf4; color: #0f7b5a; }
+  .tag.miss { background: #fdf2f1; color: #c0392b; }
+  .photos-grid { display: flex; }
+  .phase-group { flex: 1; border-right: 1px solid #eef0f5; display: flex; flex-direction: column; }
+  .phase-group:last-child { border-right: none; }
+  .phase-title {
+    font-size: .72rem; font-weight: 700; text-align: center;
+    padding: 8px 0; background: #f7f8fc; color: #4b5465;
+    border-bottom: 1px solid #eef0f5; letter-spacing: 2px;
+  }
+  .phase-photos { display: flex; flex: 1; }
+  .photo-slot {
+    flex: 1; aspect-ratio: 4/3; overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid #eef0f5;
+  }
+  .photo-slot:last-child { border-right: none; }
+  .photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-slot.empty { background: #f0f2f6; color: #b0b8c8; font-size: .65rem; text-align: center; padding: 8px; }
+  .photo-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,.45); color: #fff; font-size: .6rem; padding: 2px 4px; text-align: center;
+  }
+  .print-hint { text-align: center; padding: 20px; color: #8e97aa; font-size: .8rem; }
+  .print-btn {
+    display: inline-block; margin: 0 auto 16px; padding: 10px 28px;
+    background: #3664c8; color: #fff; border: none; border-radius: 8px;
+    font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .print-btn:hover { background: #2850a8; }
+  @media print {
+    body { background: #fff; }
+    .no-print { display: none !important; }
+    .record-card { box-shadow: none; border: 1px solid #dde1ea; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tag   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <h1>🔥 動火作業日報表</h1>
+  <div class="date">${dateLabel}</div>
+  <div class="total">共 ${records.length} 筆動火作業記錄</div>
+</div>
+<div class="container">
+  <div class="no-print print-hint">
+    <button class="print-btn" onclick="window.print()">🖨️ 列印 / 另存 PDF</button><br>
+    於列印設定中選擇「另存為 PDF」即可匯出報表
+  </div>
+  ${cards}
+</div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('請允許彈出視窗後重試'); return; }
+    win.document.write(html);
+    win.document.close();
+
+  } catch (err) {
+    console.error('generateDailyReport 失敗:', err);
+    alert('❌ 產生報表失敗：' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> 產生每日報表`;
+    }
+  }
+}
 
 function val(id) { return document.getElementById(id)?.value || ''; }
 
